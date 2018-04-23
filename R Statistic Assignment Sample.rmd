@@ -1,0 +1,536 @@
+---
+title: "R Statistic Sample"
+author: "Kheng Horng Gan Edwin"
+date: "Aug 8, 2017"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r include=FALSE, cache=FALSE}
+# Don't modify this chunk of code, it is to instal and loading the DS705data package
+if (!require(DS705data)){
+  if (!require(devtools)){
+    install.packages('devtools',repos="http://cran.rstudio.com")
+  }
+  library(devtools)
+  install_github('DataScienceUWL/DS705data')
+}
+require(DS705data)
+# load the HealthExam data set into memory
+data(HealthExam)
+```
+
+## Exercise 1
+
+For this exercise, you'll explore and summarize data on cholesterol levels for 40 randomly selected American women.
+
+### Part 1a
+
+From the HealthExam data set, extract the cholesterol level of the 40 women and assign it to the variable fs.  As a safety check, the mean cholesterol level should be 240.875 mg/dl if you've done it correctly.
+
+```{r}
+
+#use subset to extract the Sex = "F"
+femalelist <- subset(HealthExam, Sex=="F")
+fs <- femalelist$Cholesterol
+fs
+
+#check the length of fs
+length(fs)
+
+#check the means if it is equal to 240.875 mg/dl
+mean(fs)
+
+```
+
+---
+
+### Part 1b
+
+Find summary statistics and standard deviation for female cholesterol level.  Based on the summary statistics, does the data appeared to be skewed?  If so, which direction?
+
+```{r}
+
+#Summary statistic 
+summary(fs)
+
+#Standard Deviation
+sd(fs)
+
+```
+
+Yes. The sample mean is about 241 mg/dl which is significantly larger than the sample median of 194 mg/dl which suggests that the data is skewed to the right or has outliers to the right.  (Outliers or skewness pull the mean in the same direction.)
+
+---
+
+### Part 1c
+
+Does the shape of the distribution agree with your answer to 1b?  Based on the histogram, does the variable female cholesterol level appear to be approximately normally distributed?  Explain.
+
+```{r}
+
+hist(fs ,main="Female cholesterol level", xlab="mg/dl")
+
+```
+
+Yes, the answer from part 1b matches the histogram.
+Female cholesterol levels are quite skewed to the right whereas for a normal distribution they should be symmetric and mound shaped.  The normal distribution is not a good fit. 
+
+---
+
+### Part 1d  
+
+Make a boxplot for female cholesterol level.
+
+```{r}
+
+boxplot(fs, main="Female cholesterol level", ylab="mg/dl")
+
+```
+
+---
+
+### Part 1e
+
+According to the 1.5 IQR rule, what is the cutoff value for outliers in the upper tail of female cholesterol level?  
+
+```{r}
+
+# quantile(fs,.75) gives the third quartile
+# IQR(fs) gives the interquartile range
+sort(fs)
+
+upper_cutoff <- quantile(fs,.75)+1.5*IQR(fs)
+
+upper_cutoff
+
+sum(fs > upper_cutoff)
+
+```
+
+The cutoff value for outliers is `upper.fence`.  Anything higher is an outlier. There are 3 values lie above 577.125.
+
+---
+
+### Part 1f
+
+The maximum female cholesterol level is an outlier, find its $z$-score.  You'll need to combine the commands max(), mean(), and sd(). If the data did come from a normal distribution, would the maximum female cholesterol level seem unusually large?  Explain.
+
+```{r}
+
+z <- (max(fs)-mean(fs))/sd(fs)
+p <- pnorm(z,lower.tail=FALSE)
+
+```
+
+The $z$-score is `r round(z,2)` which indicates the largest cholesterol level is more than 3 standard deviations from the mean.  To say if that is unusual or not one could find that the probability of a $z$-score of `r round(z,2)` or larger is only `r format(p,digits=3)` which means that obersvations like this are quite rare.
+
+---
+
+### Part 1g
+
+Make a normal probability plot for fs, add a fit line to it, and label $y$-axis appropriately.  Based on the information in the plot, does this sample data seem to come from a normal distribution?  Explain.
+
+```{r}
+
+qqnorm(fs, ylab="mg/dl")
+qqline(fs)
+
+```
+
+No. The sample data does not come from a normal distribution because the points are not lie more or less along a line.  Based on the plot, there are systematic differences from the line at both ends.  
+
+At the low end of the data, the points lie above the line indicating that the data is larger, or to the right of, what is expected for a data from a normal distribution. Since the data is to the right of where it should be, that is an indication that the lower tail is shorter than it should be. 
+
+At the high end of the data, again the points are above the line indicating a tail that is too long on the right end of the data.  Taken together, this illustrates the right skewness of the data.  Moreover, since the line is a poor fit to the points, this suggests that the normal distribution is a poor fit for the female cholesterol level data.
+
+---
+
+## Exercise 2
+
+This problem is modeled loosely after problem 5.70 on page 287 of Ott. (book)  
+
+### Part 2a
+
+Using the data $\bar{x} = 5.0, s = 0.7, n = 50$ we can determine that the 95% $t$-CI for $\mu$ is about (4.8,5.2) with margin of error 0.2.  For large samples $z \approx t$ and $\sigma \approx s$.  Use the formula on page 231 to estimate the sample size required to get margin of error $E \approx 0.05$.  Always round up for sample size.  Read Section 5.3 in Ott if you need to review this material.
+
+```{r}
+
+s <- 0.7
+zcrit <- qnorm(0.975) # the 95% critical value has cumulative probability 0.975 (draw a picture - we want the value that corresponds to 2.5% in each tail)
+E <- 0.05
+n <- ceiling ( ( s * zcrit / E )^2 )
+
+```
+
+The required sample size is `n`.
+
+---- 
+
+### Part 2b
+
+Suppose you now have a sample with size as determined in 2a that yields $\bar{x} = 5.03$ and $s = 0.68$  
+Use R to build a fake data set with exactly the same statistics (as shown in the swirl lesson or consider the command scale() in R). The idea is to create a sample with exactly the right statistics so that we can use R functions to perform the analysis.  Now apply t.test to your constructed sample to find the 95% CI for the population mean. (Note: `rnorm(50, mean = 5.03, sd = 0.68)` is not right as it produces a sample that has close to, but not exactly the right statistics ... try it.)
+
+```{r}
+
+#the sample size is 753
+#mean = 5.03
+#sd = 0.68
+
+FakeData <- rnorm(753)
+
+FakeData <- (FakeData - mean(FakeData))/sd(FakeData)
+FakeData <- 0.68*FakeData + 5.03
+
+t.test(FakeData, conf.level = 0.95)$conf.int
+
+```
+
+----
+
+
+## Sample 3
+
+Consider two independent, random samples of delay times (in hour) for two airlines over the past 10 years. The task here is to compare the population central values by conducting a hypothesis test and constructing a 95% confidence interval for the difference in average delay time between the airlines for the population of all delays in the past 10 years.
+
+### Part 3  
+
+Load the dataset delays from the DS705data package.
+
+```{r}
+data(delays)
+head(delays)
+
+```
+
+---
+
+### Part 3a
+
+Begin by exploring the sample means, medians, and standard deviations for each airline. That is, find the sample means, medians, and standard deviations. 
+
+```{r}
+
+# use subset to group "Skybird" and "Omega".
+Skybird.data <- subset(delays, airline == "Skybird")
+Omega.data <- subset(delays, airline == "Omega")
+
+#means for Skybird
+mean(Skybird.data$delay)
+
+#medians for Skybird
+median(Skybird.data$delay)
+
+#standard deviations for Skybird
+sd(Skybird.data$delay)
+
+#means for Omega
+mean(Omega.data$delay)
+
+#medians for Omega
+median(Omega.data$delay)
+
+#standard deviations for Omega
+sd(Omega.data$delay)
+
+```
+
+---
+
+### Part 3b
+
+Produce boxplots, histograms, and normal probability plots for the delay times of both airlines.  
+
+Discuss the aspects of the plots that are relevant to the construction of the best type of test and confidence interval to compare the population central values.
+
+```{r}
+
+par(mfrow = c(3,2)) #use par(mfrow) to put them in single view
+
+#boxplots 
+boxplot(Skybird.data$delay, xlab="Delay", main="Skybird")
+boxplot(Omega.data$delay, xlab="Delay", main="Omega")
+
+#histograms
+hist(Skybird.data$delay, xlab="Delay", main="Skybird")
+hist(Omega.data$delay, xlab="Delay", main="Omega")
+
+#normal probablity plots
+qqnorm(Skybird.data$delay, main="Skybird")
+qqline(Skybird.data$delay)
+qqnorm(Omega.data$delay, main="Omega")
+qqline(Omega.data$delay)
+
+```
+
+From my analysis of the above graphics, both samples have outliers and are skewed to the right. Besides this, the normal probability plots show that the data sets are not placed symetrically along the best fit line. 
+
+From these conclusions, I believe the Wilcoxon Rank Sum test will be the best test to compare the population central values because the distributions of both samples have approximately the same shape.
+
+
+---
+
+### Part 3c
+
+Conduct hypothesis tests for the normality of the delay times for both Skybird and Omega using a 5% level of significance in each case.
+
+Use R to compute the test statistic and P-value.  
+
+State the hypotheses and conclusion of the test. Include the P-value in your conclusion.
+
+```{r}
+
+shapiro.test(Skybird.data$delay)
+
+shapiro.test(Omega.data$delay)
+
+```
+
+The null hypothesis is the sample comes from a normally distributed population. The alternative hypothesis is the sample does not come from a normally distributed population.
+
+At a 5% level of significance, the P-value is 0.0006031. Therefore, the null hypothesis of normality is rejected for the Skybird delay times.
+
+At a 5% level of significance, the P-value is 6.027e-05. Therefore, the null hypothesis of normality is rejected for the Omega delay times. 
+
+---
+
+### Part 3d	
+
+Perform the most appropriate test to compare population central values for all Skybird and Omega delay times for the past 10 years.  Use a 10% level of significance.
+
+#### Step 1
+
+State the null and alternative hypotheses for the test (in words).
+
+$$H_0: \mbox{The distributions of delay times are identical for all Skybird and Omega airlines.}$$
+
+$$H_a: \mbox{The distributions of delay times are shifted from each other for all Skybird and Omega airlines.}$$
+
+#### Step 2
+
+Use R to generate the output for the test you selected.
+
+```{r}
+# Wilcoxon Rank Sum Test
+wilcox.test(delay~airline, data=delays, conf.int=TRUE)
+
+```
+
+#### Step 3
+
+State both a statistical conclusion at $\alpha=0.1$ and interpret it in the context of the problem.
+
+At $\alpha=0.1$, we do not reject the null hypothesis.  There is sufficient evidence to conclude that the distribution of delay times for Skybird and Omega airlines are not shifted from each other. (P-value = 0.8173)
+
+---
+
+### Part 3e
+
+Construct the most appropriate 95% confidence interval to compare population central values.  Write a sentence to interpret the interval in the context of the problem.
+
+```{r}
+# 95% confidence interval
+wilcox.test(delay~airline, data=delays, conf.int=TRUE, conf.level=0.95)
+
+```
+
+With 95% confidence, the shift in the distributions of delay times for all Skybird and Omega airlines is between -0.39 to 0.28. 
+
+---
+
+### Part 3f
+
+Did you use the Welch t-test and interval or the Wilcoxon rank sum test with the corresponding interval?  Justify your choice, including some discussion of how well the conditions for the hypothesis test and confidence interval procedures were met.
+
+I used Wilcoxon rank sum test with the corresponding interval because I wanted to find out if one distribution is shifted from another. Then, the confidence interval allows me to estimate the difference between the two population means.
+
+The conditions for the hypothesis test and confidence interval procedures were met, since the populations of both Skybird and Omega airline are randomly and independently selected and both of the distribution samples have approximately the same shape.
+
+---
+
+### Part 3g
+
+What type of hypothesis testing error could have been made here?  Describe it in the context of the problem.
+
+A possible error in my hypothesis testing could have been the Type 2 error, that the null hypothesis was actually true, although the p value is greater than 0.1. 
+This would mean that the distributions of delay times are actually identical for all Skybird and Omega airlines.
+
+---
+
+### Part 3h
+
+Construct a 95% bootstrap confidence interval to compare population medians for the delay times over the past 10 years for the two airlines. Use the Bca method and a bootstrap sample size of 2000. Compare it to the interval produced by the wilcox.test function.
+
+```{r}
+require(boot)
+
+bootMedDiff <- function(d, i){
+  meds <- tapply(d[i,1], d[,2], median)
+  meds[1]-meds[2]
+}
+
+boot.object <- boot(delays, bootMedDiff, R=2000, strata = delays$airline)
+ci.bca <- boot.ci(boot.object, conf=0.95,type="bca")$bca[4:5]
+ci.bca
+
+```
+
+The result generated by the bca method is that the median of the sample is between -0.7 to 0.3, which is higher than the result generated by wilcox.test funtion (-0.4 to 0.3). 
+
+Besides this, the Wilcox test confidence interval is for the difference of pseudomedians, which is a nonparametric, unbiased estimator of a location parameter.  Without further study, it is hard to tell anymore of the story, but it's simpler to bootstrap the difference of medians.  Both tests are similar, but the bootstrap approach is both valid and simpler to understand.
+
+---
+
+## Exercise 4  
+
+An experiment was conducted to evaluate the effectiveness of a drug treatment for tapeworm in the stomachs of sheep. A random sample of 24 worm-infected lambs of approximately the same age was randomly divided into two groups. Twelve of the lambs were injected with the drug and the remaining twelve were left untreated. After a 6-month period the lambs were slaughtered and the worm counts recorded.
+
+### Part 4a
+
+Load the dataset WormSheep from the DS705data package.
+
+```{r}
+# To see all the data sets in the package
+data(package="DS705data")
+
+# Load the dataset WormSheep
+data(WormSheep)
+head(WormSheep)
+
+```
+
+---
+
+### Part 4b	
+
+Create boxplots and histograms for each group (treated vs. untreated).  Be sure that each plot is labeled appropriately.
+
+```{r}
+# use subset to group "treated" and "untreated".
+treated.data <- subset(WormSheep, treated == "treated")
+untreated.data <- subset(WormSheep, treated == "untreated")
+
+# create boxplots for treated vs. untreated
+par(mfrow = c(2,2)) #use par(mfrow) to put them in single view
+boxplot(treated.data$worms, ylab="Worms", main="Treated")
+boxplot(untreated.data$worms, ylab="Worms", main="Untreated")
+
+# create histograms for treated vs. untreated
+hist(treated.data$worms, xlab="Worms", main="Treated")
+hist(untreated.data$worms, xlab="Worms", main="Untreated")
+
+```
+
+---
+
+### Part 4c 
+
+Describe the shapes of the histograms for the sample data for each sample.
+
+In the Treated histogram, the distribution of the data seems to be a normal distribution.
+In the Untreated histogram, the distribution of the data seems to be skewed to the right. 
+
+---
+
+### Part 4d  
+
+Do either of the normal probability plots show evidence of non-normality?  Explain.
+
+```{r}
+par(mfrow = c(2,1)) #use par(mfrow) to put them in single view
+# create normal probability plots for treated
+qqnorm(treated.data$worms, main="Treated")
+qqline(treated.data$worms)
+
+# create normal probability plots for untreated
+qqnorm(untreated.data$worms, main="Untreated")
+qqline(untreated.data$worms)
+
+```
+
+Yes. Based on the normal probability plot for untreated sheep, the data set is not placed symetrically along the best fit line. This concludes the sample data for untreated sheep is not a normal distribution.
+
+The normal probability plot for treated sheep is relatively symetrical along the best fit line, so this means that it is a normal distribution. 
+
+---
+
+### Part 4e 
+
+Conduct an appropriate test to determine if the worm counts in each population can be considered as normally distributed.  Provide the p-value and the conclusion of the test at a 5% level of significance.
+
+```{r}
+# use Shapiro-Wilk hypothesis test for nomality.
+shapiro.test(treated.data$worms)
+
+shapiro.test(untreated.data$worms)
+
+```
+
+At a 5% level of significance, the P-value is 0.6504. Therefore, the null hypothesis of normality is not rejected for the worm count of the population of treated sheep. 
+
+At a 5% level of significance, the P-value is 0.5491. Therefore, the null hypothesis of normality is not rejected for the worm count of the population of untreated sheep. 
+
+---
+
+### Part 4f	
+    
+Conduct the test of your choice to determine if the population mean worm count for all sheep treated with the drug is less than the mean worm count for the population of untreated sheep.  Let $\alpha = 0.05$.
+
+#### Step 1
+
+State the null and alternative hypotheses for the test.  If you use symbols, please define them.
+
+Test Selected: Welch two sample t.test to compare the means of two independent groups
+
+Symbols: "=" means equal to, "<" means less than. 
+
+$$H_0: \mu_\mbox{worm count for treated sheep} = \mu_\mbox{worm count for untreated sheep}$$
+$$H_a: \mu_\mbox{worm count for treated sheep} < \mu_\mbox{worm count for untreated sheep}$$
+
+#### Step 2
+
+Use R to generate the output for the test you selected.
+
+```{r}
+# use Welch two sample t.test
+t.test(treated.data$worms, untreated.data$worms, alternative ="less")
+
+```
+
+#### Step 3
+
+State both a statistical conclusion at $\alpha=0.05$ and interpret it in the context of the problem.
+
+At $\alpha=0.05$, the P-value is 0.01665, this means that there is enough evidence to claim that the mean worm count for the population of sheep treated with the drug is less than the mean worm count for the population of untreated sheep.
+
+This means that the average number of worms in the treated sheep is significantly less compared to the average number of worms in the untreated sheep.
+
+---
+
+### Part 4g 
+
+Compute a 95% confidence interval for the difference in population means.  Write an interpretation in the context of the problem for this interval.
+
+```{r}
+
+t.test(treated.data$worms, untreated.data$worms, conf.level = 0.95)$conf
+
+```
+
+With 95% confidence, the population mean number of worms in treated sheep is 1.13 to 25.03 less than the population mean number of worms in untreated sheep.  
+
+---
+
+### Part 4h  
+
+Did you use the Welch t-test or the Wilcoxon rank sum test?  Justify your choice, including some discussion of how well the conditions for the hypothesis test and confidence interval procedures were met.
+
+I used the Welch t-test because I wanted to find out if the mean worm count for the population of sheep treated with the drug is less than the mean worm count for the population of untreated sheep. Then, the confidence interval allows me to estimate the difference between the two population means.
+
+The conditions for the hypothesis test and confidence interval procedures were met, since the populations of treated and untreated sheep were randomly and independently selected and both came from a normally distributed population. 
+
+---
+
